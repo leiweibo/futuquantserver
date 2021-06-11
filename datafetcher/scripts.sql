@@ -1,0 +1,20 @@
+CREATE TABLE `security_valuation` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `security_code` varchar(32) DEFAULT NULL,
+  `security_mkt` varchar(45) DEFAULT NULL,
+  `security_name` varchar(45),
+  `trade_date` datetime DEFAULT NULL,
+  `close_price` float DEFAULT NULL,
+  `change_rate` float DEFAULT NULL,
+  `mkt_value` decimal(32,3) DEFAULT NULL,
+  `traded_mkt_value` decimal(32,3) DEFAULT NULL,
+  `total_equity` decimal(32,0) DEFAULT NULL,
+  `total_traded_equity` decimal(32,0) DEFAULT NULL,
+  `pe_ttm` double DEFAULT NULL,
+  `pe_static` double DEFAULT NULL,
+  `pb` double DEFAULT NULL,
+  `peg` double DEFAULT NULL,
+  `pcf` varchar(45) DEFAULT NULL,
+  `pts` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
