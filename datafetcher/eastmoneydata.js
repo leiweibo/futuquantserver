@@ -1,6 +1,7 @@
 const axios = require('axios');
 const dayjs = require('dayjs');
 const winston = require('winston');
+const { securityValuation, normalizeArray } = require('./models/SecurityValuation');
 
 const logger = winston.createLogger({
   transports: [
@@ -11,85 +12,59 @@ const logger = winston.createLogger({
 // stkValuation('601878', 1, 500);
 // https://segmentfault.com/a/1190000022950559
 
-const knexConfig = {
-  client: 'mysql',
-  connection: {
-    host: '47.95.230.67',
-    user: 'dev_writer',
-    password: '123456',
-    database: 'fuquant',
-  },
-};
-
-const knex = require('knex')(knexConfig);
-
 const blukInsertSecurity = async (dataArray) => {
   try {
-    logger.info('start to bulk insert.');
-    const insertedRows = await knex('security_valuation').insert(dataArray);
-    logger.info(insertedRows);
+    if (dataArray && dataArray.length > 0) {
+      await securityValuation.bulkCreate(dataArray);
+      logger.info('bulk insert finished');
+    }
   } catch (error) {
-    logger.error(error);
+    logger.error(error.stack);
   }
 };
 
-function normalizeArray(dataArray, latestDate) {
-  if (dataArray) {
-    return dataArray
-      .filter((obj) => dayjs(obj.TRADEDATE).diff(latestDate) > 0)
-      .map((obj) => {
-        const rObj = {};
-        rObj.security_code = obj.SECURITYCODE;
-        rObj.security_mkt = obj.MKT;
-        rObj.security_name = obj.SName;
-        rObj.trade_date = obj.TRADEDATE;
-        rObj.close_price = obj.NEW;
-        rObj.change_rate = obj.CHG;
-        rObj.mkt_value = obj.ZSZ;
-        rObj.traded_mkt_value = obj.AGSZBHXS;
-        rObj.total_equity = obj.ZGB;
-        rObj.total_traded_equity = obj.LTAG;
-        rObj.pe_ttm = obj.PE9;
-        rObj.pe_static = obj.PE7;
-        rObj.pb = obj.PB8;
-        rObj.peg = obj.PEG1;
-        rObj.pcf = obj.PCFJYXJL9;
-        rObj.pts = obj.PS7;
-        return rObj;
-      });
-  }
-  return dataArray;
-}
+const generateUrl = function (securityCode, page, pageSize) {
+  return `http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?st=TRADEDATE&sr=-1&ps=${pageSize}&p=${page}&type=GZFX_GGZB&token=894050c76af8597a853f5b408b759f5d&js={"data":(x),"pages":(tp)}&filter=(SECURITYCODE=^${securityCode}^)`;
+};
 
 const fetchMktvalue = async (securityCode) => {
   try {
-    const latestRecord = await knex('security_valuation').select().from('security_valuation').where('security_code', securityCode)
-      .limit(1)
-      .orderBy('trade_date', 'desc');
-    let pageSize = 50;
+    const latestRecord = await securityValuation.findOne(
+      {
+        where: { security_code: securityCode },
+        order: [
+          ['trade_date', 'DESC'],
+        ],
+      },
+    );
+    let pageSize = 0;
     let page = 1;
     let loopFetch = true;
 
-    if (latestRecord.length > 0) {
-      logger.info(`the lastRecord is ${latestRecord[0].trade_date}`);
-      const lastRecordDate = dayjs(latestRecord[0].trade_date).format('YYYY-MM-DD');
+    if (latestRecord) {
+      logger.info(`the lastRecord is ${latestRecord.trade_date}`);
+      const lastRecordDate = dayjs(latestRecord.trade_date).format('YYYY-MM-DD');
       pageSize = dayjs().diff(lastRecordDate, 'day');
       logger.info(`the page size is ${pageSize}`);
       loopFetch = false;
+    } else {
+      pageSize = 1000;
     }
+
     if (pageSize < 1) {
       logger.info('No fetch needed.');
       process.exit(1);
     }
 
-    const resp = await axios.get(`http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?st=TRADEDATE&sr=-1&ps=${pageSize}&p=${page}&type=GZFX_GGZB&token=894050c76af8597a853f5b408b759f5d&js={"data":(x),"pages":(tp)}&filter=(SECURITYCODE=^${securityCode}^)`);
+    const resp = await axios.get(generateUrl(securityCode, page, pageSize));
     const { headers } = resp;
     const contentType = headers['content-type'];
     if (contentType && contentType.includes('text/plain')) {
       const result = JSON.parse(JSON.stringify(resp.data));
       const { pages, data } = result;
+      logger.info(`the raw result's length is ${data.length}`);
       const finalResult = normalizeArray(data,
-        latestRecord.length === 0 ? dayjs('2021-01-01') : dayjs(latestRecord[0].trade_date));
+        latestRecord == null ? dayjs('1990-01-01') : dayjs(latestRecord.trade_date));
       logger.info(`the final result's length is ${finalResult.length} and loopFetch: ${loopFetch}, the pages:${pages}`);
       blukInsertSecurity(finalResult);
       let i = 0;
@@ -97,7 +72,7 @@ const fetchMktvalue = async (securityCode) => {
         for (i = pages; i >= 2; i--) {
           page = i;
           logger.info('start to loop fetch.');
-          axios.get(`http://dcfm.eastmoney.com/em_mutisvcexpandinterface/api/js/get?st=TRADEDATE&sr=-1&ps=${pageSize}&p=${page}&type=GZFX_GGZB&token=894050c76af8597a853f5b408b759f5d&js={"data":(x),"pages":(tp)}&filter=(SECURITYCODE=^${securityCode}^)`)
+          axios.get(generateUrl(securityCode, page, pageSize))
             .then((newResp) => {
               logger.info('get response from the request');
               const tmpHeaders = newResp.headers;
@@ -133,8 +108,11 @@ const fetchMktvalue = async (securityCode) => {
       }
     }
   } catch (error) {
-    logger.error(error);
+    logger.error(error.stack);
   }
 };
 
-fetchMktvalue('601878');
+const targetStocks = ['601878', '000002', '601318', '000651', '000725', '003030'];
+targetStocks.forEach((val) => {
+  fetchMktvalue(val);
+});
