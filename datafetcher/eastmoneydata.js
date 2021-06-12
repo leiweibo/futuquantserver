@@ -57,6 +57,7 @@ const fetchMktvalue = async (securityCode) => {
     }
 
     const resp = await axios.get(generateUrl(securityCode, page, pageSize));
+    logger.info(`the final url is: ${generateUrl}`);
     const { headers } = resp;
     const contentType = headers['content-type'];
     if (contentType && contentType.includes('text/plain')) {
@@ -112,7 +113,9 @@ const fetchMktvalue = async (securityCode) => {
   }
 };
 
-const targetStocks = ['601878', '000002', '601318', '000651', '000725', '003030', '600196', '600030', '600315', '600115', '600660'];
-targetStocks.forEach((val) => {
-  fetchMktvalue(val);
-});
+// const targetStocks = ['601878', '000002', '601318', '000651', '000725', '003030', '600196', '600030', '600315', '600115', '600660'];
+// targetStocks.forEach((val) => {
+//   fetchMktvalue(val);
+// });
+
+fetchMktvalue('601878');

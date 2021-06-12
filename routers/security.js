@@ -18,13 +18,13 @@ router.get('/:securityCode', async (ctx) => {
         security_code: code,
         trade_date: {
           [Op.and]: {
-            [Op.gt]: params.startDate,
-            [Op.lt]: params.endDate,
+            [Op.gte]: params.startDate,
+            [Op.lte]: endDate.add(1, 'day').format('YYYY-MM-DD'),
           },
         },
       },
       order: [
-        ['trade_date', 'DESC'],
+        ['trade_date', 'ASC'],
       ],
       offset: (page - 1) * pageSize,
       limit: parseInt(pageSize, 10),
@@ -37,6 +37,7 @@ router.get('/:securityCode', async (ctx) => {
       totalPages: Math.ceil(count / pageSize),
       curPage: page,
       rows,
+      total: count,
     },
   };
 });
