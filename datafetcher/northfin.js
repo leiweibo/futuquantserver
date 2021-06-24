@@ -1,11 +1,11 @@
 const puppeteer = require('puppeteer');
 
 (async () => {
+  const browser = await puppeteer.launch({ headless: false });
   const days = ['2021/06/14', '2021/06/15', '2021/06/16', '2021/06/17', '2021/06/18'];
   days.forEach((date) => {
-    const scrape = async (d) => {
-      const browser = await puppeteer.launch({ headless: false });
-      const page = await browser.newPage();
+    const scrape = async (d, realBrowser) => {
+      const page = await realBrowser.newPage();
       await page.goto('https://www.hkexnews.hk/sdw/search/mutualmarket_c.aspx?t=sz', { waitUntil: 'load', timeout: 0 });
       console.log(d);
       await page.evaluate((realDate) => {
@@ -23,8 +23,8 @@ const puppeteer = require('puppeteer');
       });
 
       console.log(result);
-      await browser.close();
+      await realBrowser.close();
     };
-    scrape(date);
+    scrape(date, browser);
   });
 })();
