@@ -42,7 +42,7 @@ const start = async (targetMkt) => {
   const latestRecord = await northHolding.findOne(
     {
       where: {
-        security_mkt: targetMkt,
+        security_mkt: targetMkt === 'sz' ? 22 : 21,
       },
       order: [
         ['trade_date', 'DESC'],
