@@ -40,3 +40,17 @@ CREATE TABLE `fuquant`.`north_security` (
   `status` INT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `fuquant`.`north_holding_reports` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `trade_date` datetime DEFAULT NULL,
+  `security_ccass_code` VARCHAR(32) NULL,
+  `security_code` VARCHAR(32) NULL,
+  `security_name` VARCHAR(128) NULL,
+  `security_mkt` VARCHAR(45) NULL,
+  `holding_amt` decimal(32,0) NULL,
+  `holding_amt_rate` VARCHAR(45) NULL,
+  `offset` decimal(32,0),
+  `type` INT, -- 0 每日净买净卖
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
