@@ -23,11 +23,20 @@ CREATE TABLE `security_valuation` (
 CREATE TABLE `fuquant`.`north_holding` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `trade_date` datetime DEFAULT NULL,
-  `security_code` VARCHAR(32) NULL,
+  `security_ccass_code` VARCHAR(32) NULL,
   `security_name` VARCHAR(128) NULL,
   `security_mkt` VARCHAR(45) NULL,
   `holding_amt` decimal(32,0) NULL,
   `holding_amt_rate` VARCHAR(45) NULL,
   `holding_offset` decimal(32,0),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
+
+CREATE TABLE `fuquant`.`north_security` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `security_code` VARCHAR(45) NULL,
+  `security_ccass_code` VARCHAR(45) NULL,
+  `security_name` VARCHAR(45) NULL,
+  `status` INT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;

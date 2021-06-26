@@ -14,7 +14,7 @@ const northHolding = db.define(
     trade_date: {
       type: Sequelize.DATE,
     },
-    security_code: {
+    security_ccass_code: {
       type: Sequelize.STRING,
     },
     security_mkt: {
@@ -47,7 +47,7 @@ const normalizeArray = (dataArray) => {
       .map((obj) => {
         const rObj = {};
         rObj.trade_date = obj.tmpDate;
-        rObj.security_code = obj.code;
+        rObj.security_ccass_code = obj.code;
         rObj.security_mkt = obj.mkt;
         rObj.security_name = obj.name;
         rObj.holding_amt = numeral(obj.amt).value();
