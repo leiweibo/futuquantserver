@@ -19,7 +19,6 @@ const blukInsertSecurity = async (dataArray) => {
             trade_date: {
               [Op.eq]: dayjs(dataArray[0].trade_date).format('YYYY-MM-DD'),
             },
-            security_mkt: dataArray[0].security_mkt,
           },
           order: [
             ['trade_date', 'DESC'],
@@ -38,22 +37,23 @@ const blukInsertSecurity = async (dataArray) => {
   }
 };
 
-const start = async (targetMkt) => {
-  const latestRecord = await northTransactionDetail.findOne(
+const start = async () => {
+  const { count, rows } = await northTransactionDetail.findAndCountAll(
     {
-      where: {
-        security_mkt: targetMkt === 'sz' ? 22 : 21,
-      },
       order: [
         ['trade_date', 'DESC'],
       ],
     },
   );
 
-  let startDate = dayjs().subtract(1, 'year');
-  if (latestRecord) {
-    startDate = dayjs(latestRecord.trade_date);
+  let startDate = dayjs().subtract(6, 'month');
+  startDate = startDate.set('date', 1);
+
+  if (count === 1) {
+    startDate = dayjs(rows[0].trade_date);
     logger.info(`db existed data, the last trade is ${startDate}`);
+  } else if (count === 2) {
+    startDate = dayjs(rows[0].trade_date).add(1, 'day');
   } else {
     logger.info(`db not existed data, the last trade is ${startDate}`);
   }
@@ -61,75 +61,89 @@ const start = async (targetMkt) => {
   let tmpDay = dayjs();
   const days = [];
   for (tmpDay = startDate; tmpDay.diff(dayjs(), 'day') < 0; tmpDay = tmpDay.add(1, 'day')) {
-    days.push(tmpDay.format('YYYY/MM/DD'));
+    days.push(tmpDay.format('YYYYMMDD'));
   }
   const browser = await puppeteer.launch({ headless: false });
   const pendingList = [];
   const workingList = [];
   const batchRunningCnt = 1;
   days.forEach((date) => {
-    const scrape = async (d, realBrowser, market) => {
+    const scrape = async (d, realBrowser) => {
       workingList.push(d);
       const page = await realBrowser.newPage();
-      const dayObj = dayjs();
-      const day = dayObj.date() - 1;
-      const year = 0;
-      const month = dayObj.month();
-      const mkt = (targetMkt === 'sz' ? 2 : 0);
-      await page.goto(`https://www.hkex.com.hk/Mutual-Market/Stock-Connect/Statistics/Historical-Daily?sc_lang=zh-HK#select4=1&select5=${mkt}&select3=${year}&select1=${day}&select2=${month}`, { waitUntil: 'load', timeout: 0 });
-      await page.evaluate((realDate) => {
-        document.querySelector('#txtShareholdingDate').value = realDate;
-        document.querySelector('#btnSearch').click();
-      }, d);
+      page.on('response', async (response) => {
+        if (response.status() === 200 && response.url().includes(`data_tab_daily_${d}c.js`)) {
+          response.text().then(async (body) => {
+            // const result = JSON.parse(body.substring(10));
+            const result = eval(`(${body.substring(10)})`);
+            const finalResult = result.map((data) => {
+              const tradeDate = data.date;
+              const fullMkt = data.market;
+              const values = data.content[0].table.tr;
+              const turnoverTrades = values[0].td[0][0];
+              const buyTrades = values[1].td[0][0];
+              const sellTrades = values[2].td[0][0];
+              const sumBuysellAmt = values[3].td[0][0];
+              const buyAmt = values[4].td[0][0];
+              const sellAmt = values[5].td[0][0];
+              const dailyQuotaBalance = values[6] ? values[6].td[0][0] : '0';
+              const dailyQuotaBalancePercet = values[7] ? values[7].td[0][0] : '0';
+              return {
+                tradeDate,
+                turnoverTrades,
+                buyTrades,
+                sellTrades,
+                sumBuysellAmt,
+                buyAmt,
+                sellAmt,
+                dailyQuotaBalance,
+                dailyQuotaBalancePercet,
+                fullMkt,
+              };
+            });
+            await blukInsertSecurity(normalizeArray(finalResult));
+            // remove the runed date.
+            if (!page.isClosed()) {
+              await page.close();
+            }
 
-      await page.waitForNavigation();
-      const result = await page.evaluate((realMkt) => {
-        const tradeDate = document.querySelector('.csmStatTimeContainer').children[0].innerText;
-        const rows = document.querySelectorAll('.migrate-table__noheader > tbody > tr');
-        const turnoverTrades = rows[0].children[1].innerText;
-        const buyTrades = rows[1].children[1].innerText;
-        const sellTrades = rows[2].children[1].innerText;
-        const sumBuysellAmt = rows[3].children[1].innerText;
-        const buyAmt = rows[4].children[1].innerText;
-        const sellAmt = rows[5].children[1].innerText;
-        const dailyQuotaBalance = rows[6].children[1].innerText;
-        const dailyQuotaBalancePercet = rows[7].children[1].innerText;
-        return {
-          tradeDate,
-          turnoverTrades,
-          buyTrades,
-          sellTrades,
-          sumBuysellAmt,
-          buyAmt,
-          sellAmt,
-          dailyQuotaBalance,
-          dailyQuotaBalancePercet,
-          realMkt,
-        };
-      }, market);
-      await blukInsertSecurity(normalizeArray([result]));
-      // remove the runed date.
-      const index = workingList.indexOf(d);
-      workingList.splice(index, 1);
-      await page.close();
-      // await scrape(pendingList.shift(), realBrowser);
-      if (pendingList.length > 0) {
-        const targetDate = pendingList.shift();
-        await scrape(targetDate, realBrowser, market);
-      } else {
-        await realBrowser.close();
+            const index = workingList.indexOf(d);
+            workingList.splice(index, 1);
+            // await scrape(pendingList.shift(), realBrowser);
+            if (pendingList.length > 0) {
+              const targetDate = pendingList.shift();
+              await scrape(targetDate, realBrowser);
+            } else {
+              await realBrowser.close();
+            }
+          });
+        } else if (pendingList.length === 0) {
+          await page.close();
+        } else {
+          await page.close();
+          const targetDate = pendingList.shift();
+          await scrape(targetDate, realBrowser);
+        }
+      });
+
+      // 开始浏览
+      try {
+        await page.goto(`https://www.hkex.com.hk/chi/csm/DailyStat/data_tab_daily_${d}c.js`);
+      } catch (err) {
+        //
+      } finally {
+        //
       }
     };
 
     if (workingList.length >= batchRunningCnt) {
       pendingList.push(date);
     } else {
-      scrape(date, browser, targetMkt);
+      scrape(date, browser);
     }
   });
 };
 
 (async () => {
-  await start('sh');
-  // await start('sz');
+  await start();
 })();

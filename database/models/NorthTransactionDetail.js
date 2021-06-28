@@ -19,13 +19,13 @@ const northTransactionDetail = db.define(
       type: Sequelize.DATE,
     },
     buy_trades: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(32, 2),
     },
     sell_trades: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(32, 2),
     },
     turnover_trades: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(32, 2),
     },
     sum_buysell_amt: {
       type: Sequelize.INTEGER,
@@ -37,10 +37,10 @@ const northTransactionDetail = db.define(
       type: Sequelize.INTEGER,
     },
     daily_quota_balance: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(12, 2),
     },
     daily_quota_balance_percet: {
-      type: Sequelize.FLOAT,
+      type: Sequelize.DECIMAL(12, 3),
     },
   },
   {
@@ -65,7 +65,7 @@ const normalizeArray = (dataArray) => {
         rObj.sell_amt = numeral(obj.sellAmt).value();
         rObj.daily_quota_balance = numeral(obj.dailyQuotaBalance).value();
         rObj.daily_quota_balance_percet = numeral(obj.dailyQuotaBalancePercet).value();
-        rObj.security_mkt = obj.realMkt === 'sz' ? '22' : '21';
+        rObj.security_mkt = obj.fullMkt;
         return rObj;
       });
   }

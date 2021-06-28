@@ -36,13 +36,13 @@ CREATE TABLE `fuquant`.`north_transaction_detail` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `security_mkt` VARCHAR(45) NULL,
   `trade_date` DATETIME NULL,
-  `buy_trades` FLOAT NULL,
-  `sell_trades` FLOAT NULL,
-  `turnover_trades` FLOAT NULL,
+  `buy_trades` decimal(32, 2) NULL,
+  `sell_trades` decimal(32, 2) NULL,
+  `turnover_trades` decimal(32, 2) NULL,
   `buy_amt` INT NULL,
   `sell_amt` INT NULL,
   `sum_buysell_amt` INT NULL,
-  `daily_quota_balance` FLOAT NULL,
-  `daily_quota_balance_percet` FLOAT NULL,
+  `daily_quota_balance` decimal(12, 2) NULL,
+  `daily_quota_balance_percet` decimal(12, 2) NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
