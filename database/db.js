@@ -9,7 +9,7 @@ const db = new Sequelize('fuquant', 'dev_writer', '123456', {
     min: 0,
     idle: 10000,
   },
-  logging: true,
+  logging: false,
 });
 
 module.exports = db;
