@@ -2,8 +2,8 @@ const { Sequelize } = require('sequelize');
 const numeral = require('numeral');
 const db = require('../db');
 
-const northHolding = db.define(
-  'north_holding',
+const northHoldingReports = db.define(
+  'north_holding_reports',
   {
     id: {
       type: Sequelize.INTEGER,
@@ -15,6 +15,9 @@ const northHolding = db.define(
       type: Sequelize.DATE,
     },
     security_ccass_code: {
+      type: Sequelize.STRING,
+    },
+    security_code: {
       type: Sequelize.STRING,
     },
     security_mkt: {
@@ -29,33 +32,20 @@ const northHolding = db.define(
     holding_amt: {
       type: Sequelize.DECIMAL(32, 3),
     },
-    holding_offset: {
+    offset: {
       type: Sequelize.DECIMAL(32, 3),
     },
+    type: {
+      type: Sequelize.INTEGER,
+    }
   },
   {
-    tableName: 'north_holding',
+    tableName: 'north_holding_reports',
     createdAt: false,
     updatedAt: false,
     timestamps: false,
   },
 );
 
-const normalizeArray = (dataArray) => {
-  if (dataArray) {
-    return dataArray
-      .map((obj) => {
-        const rObj = {};
-        rObj.trade_date = obj.tmpDate;
-        rObj.security_ccass_code = obj.code;
-        rObj.security_mkt = obj.mkt;
-        rObj.security_name = obj.name;
-        rObj.holding_amt = numeral(obj.amt).value();
-        rObj.holding_amt_rate = obj.amtPer;
-        return rObj;
-      });
-  }
-  return dataArray;
-};
 
-module.exports = { northHolding, normalizeArray };
+module.exports = { northHoldingReports };

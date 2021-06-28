@@ -119,6 +119,6 @@ const start = async (targetMkt) => {
 };
 
 (async () => {
-  start('sh');
+  await start('sh');
   await start('sz');
 })();
