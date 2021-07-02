@@ -51,6 +51,7 @@ const getHoldingGroupByMonth = async (month, fromScratch) => {
     attributes: [
       'security_ccass_code',
       [Sequelize.fn('sum', Sequelize.col('holding_amt')), 'total_holding_amount'],
+      'security_mkt',
     ],
     where: {
       trade_date: {
@@ -60,7 +61,7 @@ const getHoldingGroupByMonth = async (month, fromScratch) => {
         },
       },
     },
-    group: 'security_ccass_code',
+    group: ['security_ccass_code', 'security_mkt'],
   });
   return rows;
 };
@@ -91,6 +92,7 @@ router.get('/monthly/diff', async (ctx) => {
       securityCCassCode: r.security_ccass_code,
       securityCode: tmp.security_code,
       securityName: tmp.security_name,
+      securityMkt: r.security_mkt,
     };
   });
 
