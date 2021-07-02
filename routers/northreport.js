@@ -44,9 +44,9 @@ router.get('/:securityCode', async (ctx) => {
   };
 });
 
-const getHoldingGroupByMonth = async (month, fromScratch) => {
-  const startDate = fromScratch ? dayjs().set('month', 10).set('year', 2020).set('date', 1) : dayjs().set('month', month - 1).set('date', 1);
-  const endDate = dayjs().set('month', month).set('date', 1);
+const getHoldingGroupByMonth = async (date, fromScratch) => {
+  const startDate = fromScratch ? dayjs().set('month', 10).set('year', 2020).set('date', 1) : dayjs().set('month', date.get('month')).set('year', date.get('year')).set('date', 1);
+  const endDate = dayjs().set('month', date.get('month') + 1).set('date', 1);
   const rows = await northHolding.findAll({
     attributes: [
       'security_ccass_code',
@@ -68,9 +68,9 @@ const getHoldingGroupByMonth = async (month, fromScratch) => {
 
 router.get('/monthly/diff', async (ctx) => {
   const params = ctx.request.query;
-  const month = params.m;
-  const curMonthData = await getHoldingGroupByMonth(month);
-  const previousData = await getHoldingGroupByMonth(month - 1);
+  const date = dayjs(params.d);
+  const curMonthData = await getHoldingGroupByMonth(date);
+  const previousData = await getHoldingGroupByMonth(date.subtract(1, 'month'));
 
   const diffResult = curMonthData.filter((v) => {
     const exists = previousData.find((e) => e.security_ccass_code === v.security_ccass_code);
