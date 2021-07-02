@@ -31,5 +31,4 @@ const northSecurity = db.define(
   },
 );
 
-
 module.exports = { northSecurity };
