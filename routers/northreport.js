@@ -1,10 +1,9 @@
 const router = require('koa-router')();
-const { Op, Sequelize } = require('sequelize');
-
+const { Op } = require('sequelize');
 const dayjs = require('dayjs');
 const { northHoldingReports } = require('../database/models/NorthHoldingReport');
-const { northHolding } = require('../database/models/NorthHolding');
 const { northSecurity } = require('../database/models/NorthSecurity');
+const { getHoldingGroupByMonth } = require('../helpers/northreporthelper');
 
 router.get('/:securityCode', async (ctx) => {
   const params = ctx.request.query;
@@ -43,28 +42,6 @@ router.get('/:securityCode', async (ctx) => {
     },
   };
 });
-
-const getHoldingGroupByMonth = async (date, fromScratch) => {
-  const startDate = fromScratch ? dayjs().set('month', 10).set('year', 2020).set('date', 1) : dayjs().set('month', date.get('month')).set('year', date.get('year')).set('date', 1);
-  const endDate = dayjs().set('month', date.get('month') + 1).set('date', 1);
-  const rows = await northHolding.findAll({
-    attributes: [
-      'security_ccass_code',
-      [Sequelize.fn('sum', Sequelize.col('holding_amt')), 'total_holding_amount'],
-      'security_mkt',
-    ],
-    where: {
-      trade_date: {
-        [Op.and]: {
-          [Op.gte]: startDate.format('YYYY-MM-DD'),
-          [Op.lt]: endDate.format('YYYY-MM-DD'),
-        },
-      },
-    },
-    group: ['security_ccass_code', 'security_mkt'],
-  });
-  return rows;
-};
 
 router.get('/monthly/diff', async (ctx) => {
   const params = ctx.request.query;

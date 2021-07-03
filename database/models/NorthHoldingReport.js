@@ -35,9 +35,12 @@ const northHoldingReports = db.define(
     offset: {
       type: Sequelize.DECIMAL(32, 3),
     },
+    // type:
+    // 0: 指定股票每日持仓变化报告
+    // 1: 知道股票每月持仓变化报告
     type: {
       type: Sequelize.INTEGER,
-    }
+    },
   },
   {
     tableName: 'north_holding_reports',
@@ -46,6 +49,5 @@ const northHoldingReports = db.define(
     timestamps: false,
   },
 );
-
 
 module.exports = { northHoldingReports };
