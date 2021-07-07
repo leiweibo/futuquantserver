@@ -49,11 +49,9 @@ const start = async () => {
   let startDate = dayjs().subtract(6, 'month');
   startDate = startDate.set('date', 1);
 
-  if (count === 1) {
-    startDate = dayjs(rows[0].trade_date);
-    logger.info(`db existed data, the last trade is ${startDate}`);
-  } else if (count === 2) {
+  if (count > 0) {
     startDate = dayjs(rows[0].trade_date).add(1, 'day');
+    logger.info(`db existed data, the last trade is ${startDate}`);
   } else {
     logger.info(`db not existed data, the last trade is ${startDate}`);
   }
@@ -62,6 +60,9 @@ const start = async () => {
   const days = [];
   for (tmpDay = startDate; tmpDay.diff(dayjs(), 'day') < 0; tmpDay = tmpDay.add(1, 'day')) {
     days.push(tmpDay.format('YYYYMMDD'));
+  }
+  if (days.length === 0) {
+    return;
   }
   const browser = await puppeteer.launch({ headless: false });
   const pendingList = [];

@@ -1,14 +1,14 @@
 // 北向资金标加载
 const fs = require('fs');
 const { northSecurity } = require('../database/models/NorthSecurity');
-const digitalReg = /^[\d]*$/
 
-const start = async (file)=> {
-  console.log('start....')
-  
+const digitalReg = /^[\d]*$/;
+
+const start = async (file) => {
+  console.log('start....');
   fs.readFile(file, 'utf16le', (err, data) => {
     if (err) {
-      console.error(err)
+      console.error(err);
       return;
     }
     const finalData = data.split('\n')
@@ -23,19 +23,18 @@ const start = async (file)=> {
           security_ccass_code: array[2],
           security_name: array[3],
           status: 0,
-        }
+        };
       });
 
-      northSecurity.bulkCreate(finalData);
+    northSecurity.bulkCreate(finalData);
   });
 };
 
 (async () => {
   await northSecurity.destroy({
     where: {},
-    truncate: true
-  })
-  
+    truncate: true,
+  });
   await start('../database/SSE_Securities_c.csv');
   await start('../database/SZSE_Securities_c.csv');
-})()
+})();
