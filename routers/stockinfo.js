@@ -33,25 +33,68 @@ router.get('/important', async (ctx) => {
   }).map((d1) => dayjs(d1.REPORT_DATE).format('YYYY-MM-DD'));
 
   // 获取资产负债率 = 总负债/总资产
-  // 质押比例 直接从下面url获取：
-  // https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TRADE_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_CSDC_LIST&columns=ALL&quoteColumns=&source=WEB&client=WEB&filter=(SECURITY_CODE=%22601318%22)
-  // 商誉/净资产比 = 商誉/归属于母公司股东权益总计
   const assetsDebtUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList.join()}&code=${securityCode}`;
   console.log(`the assetsDebtUrl is ${assetsDebtUrl}`);
+  // 这个接口一次请求最多返回5条，但对于我们的情况，5条也够了。
   const assetsDebtResp = await axios.get(assetsDebtUrl);
   const assetDebtRatios = assetsDebtResp.data.data.map((assetDebtData) => {
+    // 商誉
+    const goodWill = assetDebtData.GOODWILL;
+    // 净资产，即归属于母公司股东权益总计
+    const netAssset = assetDebtData.TOTAL_PARENT_EQUITY;
+    // 应付债券
+    const boundPayable = assetDebtData.BOND_PAYABLE;
+    // 长期借款
+    const shortLoan = assetDebtData.SHORT_LOAN;
+    // 短期借款
+    const longLoan = assetDebtData.LONG_LOAN;
+    // 货币现金
+    const cash = assetDebtData.MONETARYFUNDS;
     const result = {
-      totalAsset: assetDebtData.TOTAL_ASSETS, // 总资产
-      totalLiabilities: assetDebtData.TOTAL_LIABILITIES, // 总负债,
+      // 总资产
+      totalAsset: assetDebtData.TOTAL_ASSETS,
+      // 总负债,
+      totalLiabilities: assetDebtData.TOTAL_LIABILITIES,
+      // 资产负债率
       debtRatio: (Number(assetDebtData.TOTAL_LIABILITIES) / Number(assetDebtData.TOTAL_ASSETS))
         .toFixed(4),
+      // 商誉/净资产比 = 商誉/归属于母公司股东权益总计
+      goodWillRatio: (Number(goodWill) / Number(netAssset)).toFixed(4),
+      tradeDate: dayjs(assetDebtData.REPORT_DATE).format('YYYY-MM-DD'),
+      boundPayable,
+      shortLoan,
+      longLoan,
+      cash,
     };
     return result;
   });
+
+  // 利润表数据
+  const profitUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/lrbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList}&code=${securityCode}`;
+  console.log(`--------> ${profitUrl}`);
+  const profitResp = await axios.get(profitUrl);
+  const finalComposedData = profitResp.data.data.map((profitData, index) => {
+    const finalResult = {
+      ...assetDebtRatios[index],
+      netProfilt: profitData.PARENT_NETPROFIT,
+    };
+    return finalResult;
+  });
+
+  // 质押比例 直接从下面url获取：
+  const pledgeUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TRADE_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_CSDC_LIST&columns=ALL&quoteColumns=&source=WEB&client=WEB&filter=(SECURITY_CODE="${securityCode.substring(2)}")`;
+  console.log(pledgeUrl);
+  const pledgeResp = await axios.get(pledgeUrl);
+  const pledgeRespJson = JSON.parse(JSON.stringify(pledgeResp.data));
+  const pledgeRatio = pledgeRespJson.result.data[0].PLEDGE_RATIO;
+
   ctx.body = {
     succcess: true,
     msg: 'get data success',
-    data: assetDebtRatios,
+    data: {
+      finalComposedData,
+      pledgeRatio,
+    },
   };
 });
 
