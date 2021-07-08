@@ -69,6 +69,22 @@ router.get('/important', async (ctx) => {
     return result;
   });
 
+  // 主要指标
+  const keyIndexUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/ZYZBAjaxNew?type=1&code=${securityCode}`;
+  const keyIndexResp = await axios.get(keyIndexUrl);
+  const keyIndexData = keyIndexResp.data.data.map((grossProfit) => {
+    const result = {
+      reportDate: dayjs(grossProfit.REPORT_DATE).format('YYYY-MM-DD'),
+      // 毛利率
+      grossProfilt: grossProfit.XSMLL,
+      // ROE
+      roe: grossProfit.ROEJQ,
+      // 净利润
+      netProfit: grossProfit.PARENTNETPROFIT,
+    };
+    return result;
+  });
+
   // 利润表数据
   const profitUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/lrbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList}&code=${securityCode}`;
   console.log(`--------> ${profitUrl}`);
@@ -81,6 +97,28 @@ router.get('/important', async (ctx) => {
     return finalResult;
   });
 
+  // 经营现金流
+  const operationCashFlowUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/xjllbAjaxNew?companyType=${companyType}&reportDateType=1&reportType=1&dates=${dateList}&code=${securityCode}`;
+  const operationCashFlowResp = await axios.get(operationCashFlowUrl);
+  const operationCashFlowData = operationCashFlowResp.data.data.map((cashflowData) => {
+    const cashflowResult = {
+      reportDate: cashflowData.REPORT_DATE,
+      netCashflow: cashflowData.NETCASH_OPERATE,
+    };
+    return cashflowResult;
+  });
+
+  let convertedSecurityCode = '';
+  if (securityCode.startsWith('SH')) {
+    convertedSecurityCode = securityCode.replace('SH', '1.');
+  } else {
+    convertedSecurityCode = securityCode.replace('SZ', '0.');
+  }
+  // 获取总市值
+  const totalMktValUrl = `http://push2.eastmoney.com/api/qt/stock/get?fields=f116,f58&secid=${convertedSecurityCode}`;
+  const totalMktValueResp = await axios.get(totalMktValUrl);
+  const totalMktValue = totalMktValueResp.data.data.f116;
+  const securityName = totalMktValueResp.data.data.f58;
   // 质押比例 直接从下面url获取：
   const pledgeUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TRADE_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_CSDC_LIST&columns=ALL&quoteColumns=&source=WEB&client=WEB&filter=(SECURITY_CODE="${securityCode.substring(2)}")`;
   console.log(pledgeUrl);
@@ -92,8 +130,13 @@ router.get('/important', async (ctx) => {
     succcess: true,
     msg: 'get data success',
     data: {
+      securityName,
+      securityCode,
+      totalMktValue,
       finalComposedData,
+      keyIndexData,
       pledgeRatio,
+      operationCashFlowData,
     },
   };
 });
