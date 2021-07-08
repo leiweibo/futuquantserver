@@ -61,7 +61,7 @@ router.get('/important', async (ctx) => {
         .toFixed(4),
       // 商誉/净资产比 = 商誉/归属于母公司股东权益总计
       goodWillRatio: (Number(goodWill) / Number(netAssset)).toFixed(4),
-      tradeDate: dayjs(assetDebtData.REPORT_DATE).format('YYYY-MM-DD'),
+      reportDate: dayjs(assetDebtData.REPORT_DATE).format('YYYY-MM-DD'),
       boundPayable,
       shortLoan,
       longLoan,
@@ -77,7 +77,7 @@ router.get('/important', async (ctx) => {
     const result = {
       reportDate: dayjs(grossProfit.REPORT_DATE).format('YYYY-MM-DD'),
       // 毛利率
-      grossProfilt: grossProfit.XSMLL,
+      grossProfit: grossProfit.XSMLL,
       // ROE
       roe: grossProfit.ROEJQ,
       // 净利润
@@ -93,7 +93,7 @@ router.get('/important', async (ctx) => {
   const finalComposedData = profitResp.data.data.map((profitData, index) => {
     const finalResult = {
       ...assetDebtRatios[index],
-      netProfilt: profitData.PARENT_NETPROFIT,
+      netProfit: profitData.PARENT_NETPROFIT,
     };
     return finalResult;
   });
