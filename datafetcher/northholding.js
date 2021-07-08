@@ -3,6 +3,7 @@ const puppeteer = require('puppeteer');
 const winston = require('winston');
 const { Op } = require('sequelize');
 const { northHolding, normalizeArray } = require('../database/models/NorthHolding');
+const { puppeteerConfig } = require('../helpers/puppeteerhelper');
 
 const logger = winston.createLogger({
   transports: [
@@ -64,7 +65,7 @@ const start = async (targetMkt) => {
     days.push(tmpDay.format('YYYY/MM/DD'));
   }
 
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch(puppeteerConfig);
   const pendingList = [];
   const workingList = [];
   const batchRunningCnt = 1;

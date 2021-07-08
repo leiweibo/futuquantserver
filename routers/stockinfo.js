@@ -2,6 +2,7 @@ const router = require('koa-router')();
 const axios = require('axios');
 const dayjs = require('dayjs');
 const puppeteer = require('puppeteer');
+const { puppeteerConfig } = require('../helpers/puppeteerhelper');
 
 // http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbDateAjaxNew?companyType=4&reportDateType=1&code=SZ000002
 // 通过上面的这个地址，来获取年报的时间，然后传个下面的这个url里面的dates字段。
@@ -19,7 +20,7 @@ router.get('/important', async (ctx) => {
   const securityCode = params.code;
 
   // run pupperteer to get the company type.
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch(puppeteerConfig);
   const page = await browser.newPage();
   await page.goto(`http://f10.eastmoney.com/f10_v2/FinanceAnalysis.aspx?code=${securityCode}`, { waitUntil: 'load', timeout: 0 });
   const companyType = await page.evaluate(() => document.querySelector('#hidctype').value);
