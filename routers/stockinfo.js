@@ -82,6 +82,8 @@ router.get('/important', async (ctx) => {
       roe: grossProfit.ROEJQ,
       // 净利润
       netProfit: grossProfit.PARENTNETPROFIT,
+      // 净利润增长率
+      netProfiltRatio: Number(grossProfit.PARENTNETPROFITTZ.toFixed(2)),
     };
     return result;
   });
