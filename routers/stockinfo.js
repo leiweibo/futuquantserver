@@ -15,6 +15,9 @@ const { puppeteerConfig } = require('../helpers/puppeteerhelper');
 // reportDateType: 0,表示按报告期
 // reportDateType: 1,表示按年度
 
+// http://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=50&pageNumber=1&reportName=RPT_SHAREBONUS_DET&columns=ALL&js={"data":(x),"pages":(tp)}&source=WEB&client=WEB&filter=(SECUCODE="002532.SZ")
+// 获取分红数据
+
 router.get('/important', async (ctx) => {
   const params = ctx.request.query;
   const securityCode = params.code;
@@ -35,7 +38,6 @@ router.get('/important', async (ctx) => {
 
   // 获取资产负债率 = 总负债/总资产
   const assetsDebtUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList.join()}&code=${securityCode}`;
-  console.log(`the assetsDebtUrl is ${assetsDebtUrl}`);
   // 这个接口一次请求最多返回5条，但对于我们的情况，5条也够了。
   const assetsDebtResp = await axios.get(assetsDebtUrl);
   const assetDebtRatios = assetsDebtResp.data.data.map((assetDebtData) => {
@@ -90,7 +92,6 @@ router.get('/important', async (ctx) => {
 
   // 利润表数据
   const profitUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/lrbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList}&code=${securityCode}`;
-  console.log(`--------> ${profitUrl}`);
   const profitResp = await axios.get(profitUrl);
   const finalComposedData = profitResp.data.data.map((profitData, index) => {
     const finalResult = {
@@ -124,10 +125,13 @@ router.get('/important', async (ctx) => {
   const securityName = totalMktValueResp.data.data.f58;
   // 质押比例 直接从下面url获取：
   const pledgeUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=TRADE_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_CSDC_LIST&columns=ALL&quoteColumns=&source=WEB&client=WEB&filter=(SECURITY_CODE="${securityCode.substring(2)}")`;
-  console.log(pledgeUrl);
   const pledgeResp = await axios.get(pledgeUrl);
   const pledgeRespJson = JSON.parse(JSON.stringify(pledgeResp.data));
   const pledgeRatio = pledgeRespJson.result.data[0].PLEDGE_RATIO;
+
+  const dividedBonusUrl = `http://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=50&pageNumber=1&reportName=RPT_SHAREBONUS_DET&columns=ALL&source=WEB&client=WEB&filter=(SECUCODE="${securityCode.substring(2)}.${securityCode.substring(0, 2)}")`;
+  const dividedBonusRes = await axios.get(dividedBonusUrl);
+  const dividedBonus = dividedBonusRes.data.result.data;
 
   ctx.body = {
     succcess: true,
@@ -140,6 +144,7 @@ router.get('/important', async (ctx) => {
       keyIndexData,
       pledgeRatio,
       operationCashFlowData,
+      dividedBonus,
     },
   };
 });
