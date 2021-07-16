@@ -15,8 +15,6 @@ const { puppeteerConfig } = require('../helpers/puppeteerhelper');
 // reportDateType: 0,表示按报告期
 // reportDateType: 1,表示按年度
 
-// http://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=50&pageNumber=1&reportName=RPT_SHAREBONUS_DET&columns=ALL&js={"data":(x),"pages":(tp)}&source=WEB&client=WEB&filter=(SECUCODE="002532.SZ")
-// 获取分红数据
 
 router.get('/important', async (ctx) => {
   const params = ctx.request.query;
@@ -129,10 +127,6 @@ router.get('/important', async (ctx) => {
   const pledgeRespJson = JSON.parse(JSON.stringify(pledgeResp.data));
   const pledgeRatio = pledgeRespJson.result.data[0].PLEDGE_RATIO;
 
-  const dividedBonusUrl = `http://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=50&pageNumber=1&reportName=RPT_SHAREBONUS_DET&columns=ALL&source=WEB&client=WEB&filter=(SECUCODE="${securityCode.substring(2)}.${securityCode.substring(0, 2)}")`;
-  const dividedBonusRes = await axios.get(dividedBonusUrl);
-  const dividedBonus = dividedBonusRes.data.result.data;
-
   ctx.body = {
     succcess: true,
     msg: 'get data success',
@@ -144,7 +138,6 @@ router.get('/important', async (ctx) => {
       keyIndexData,
       pledgeRatio,
       operationCashFlowData,
-      dividedBonus,
     },
   };
 });
