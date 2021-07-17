@@ -15,7 +15,6 @@ const { puppeteerConfig } = require('../helpers/puppeteerhelper');
 // reportDateType: 0,表示按报告期
 // reportDateType: 1,表示按年度
 
-
 router.get('/important', async (ctx) => {
   const params = ctx.request.query;
   const securityCode = params.code;
