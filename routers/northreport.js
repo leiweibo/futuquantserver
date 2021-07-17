@@ -43,14 +43,9 @@ router.get('/:securityCode', async (ctx) => {
   };
 });
 
-router.get('/monthly/diff', async (ctx) => {
-  const params = ctx.request.query;
-  const date = dayjs(params.d);
-  const curMonthData = await getHoldingGroupByMonth(date);
-  const previousData = await getHoldingGroupByMonth(date.subtract(1, 'month'));
-
-  const diffResult = curMonthData.filter((v) => {
-    const exists = previousData.find((e) => e.security_ccass_code === v.security_ccass_code);
+const getDiff = async (array1, array2) => {
+  const diffResult = array1.filter((v) => {
+    const exists = array2.find((e) => e.security_ccass_code === v.security_ccass_code);
     return !exists;
   });
   const targetList = diffResult.map((r) => r.security_ccass_code);
@@ -67,17 +62,29 @@ router.get('/monthly/diff', async (ctx) => {
     return {
       totalHoldAmt: r.total_holding_amount,
       securityCCassCode: r.security_ccass_code,
-      securityCode: tmp.security_code,
-      securityName: tmp.security_name,
+      securityCode: tmp == null ? '' : tmp.security_code,
+      securityName: r.security_name,
       securityMkt: r.security_mkt,
     };
   });
 
+  return finalResult;
+};
+
+router.get('/monthly/diff', async (ctx) => {
+  const params = ctx.request.query;
+  const date = dayjs(params.d);
+  const curMonthData = await getHoldingGroupByMonth(date);
+  const previousData = await getHoldingGroupByMonth(date.subtract(1, 'month'));
+
+  const increaseResult = await getDiff(curMonthData, previousData);
+  const decreaseResult = await getDiff(previousData, curMonthData);
   ctx.body = {
     succcess: true,
     msg: 'get data success',
-    result: finalResult,
-    count: finalResult.length,
+    increaseResult,
+    decreaseResult,
+    count: increaseResult.length + decreaseResult.length,
   };
 });
 

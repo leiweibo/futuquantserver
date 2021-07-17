@@ -8,6 +8,7 @@ const getHoldingGroupByMonth = async (date, fromScratch) => {
   const rows = await northHolding.findAll({
     attributes: [
       'security_ccass_code',
+      'security_name',
       [Sequelize.fn('sum', Sequelize.col('holding_amt')), 'total_holding_amount'],
       'security_mkt',
     ],
@@ -19,7 +20,7 @@ const getHoldingGroupByMonth = async (date, fromScratch) => {
         },
       },
     },
-    group: ['security_ccass_code', 'security_mkt'],
+    group: ['security_ccass_code', 'security_mkt', 'security_name'],
   });
   return rows;
 };
