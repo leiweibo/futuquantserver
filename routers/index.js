@@ -9,6 +9,7 @@ const northHoldingService = require('./northholding');
 const stockInforService = require('./stockinfo');
 const hqService = require('./hq');
 const bonusService = require('./stockbonus');
+const exploreService = require('./northholdingexplore');
 
 router.prefix(apiPrefix);
 
@@ -19,4 +20,5 @@ router.use('/northholding', northHoldingService.routes());
 router.use('/stockinfo', stockInforService.routes());
 router.use('/hq', hqService.routes());
 router.use('/bonus', bonusService.routes());
+router.use('/explore', exploreService.routes());
 module.exports = router;
