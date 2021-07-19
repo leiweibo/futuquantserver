@@ -38,7 +38,7 @@ const getByDate = async (startDate, endDate, page, pageSize) => {
       offset: (page - 1) * pageSize,
       limit: parseInt(pageSize, 10),
       order: [
-        ['trade_date', 'ASC'],
+        ['security_ccass_code', 'ASC'],
       ],
     },
   );
@@ -48,11 +48,13 @@ const getByDate = async (startDate, endDate, page, pageSize) => {
 const getPreData = (r1, row) => {
   const tmp = row.rows.find((r) => r.security_ccass_code === r1.security_ccass_code);
   return {
-    ccasscode: tmp.security_ccass_code,
+    ccasscode: tmp ? tmp.security_ccass_code : '--',
     prev_holding_amt: tmp ? tmp.holding_amt : 0,
     prev_trade_date: tmp ? tmp.trade_date : 0,
     prev_holding_amt_rate: tmp ? tmp.holding_amt_rate : 0,
     offsetVal: r1.holding_amt - (tmp ? tmp.holding_amt : 0),
+    changeRatio: tmp ? ((r1.holding_amt - tmp.holding_amt) / tmp.holding_amt)
+      .toFixed(2) : 100,
   };
 };
 
@@ -62,38 +64,51 @@ router.get('/getStkPerformance', async (ctx) => {
   const mktOnlineDates = await getMktOnlineDate();
   const page = params.p;
   const pageSize = params.ps;
+  const increase = Number(params.inc);
+  const decrease = -Number(params.dec);
+  const performanceDuration = Number(params.duration ? params.duration : 3);
 
   const startDate1 = dayjs(mktOnlineDates[1].time).format('YYYY-MM-DD');
   const endDate1 = dayjs(mktOnlineDates[0].time).format('YYYY-MM-DD');
   const rows1 = await getByDate(startDate1, endDate1, page, pageSize);
 
-  const startDate2 = dayjs(mktOnlineDates[1 + 3].time).format('YYYY-MM-DD');
-  const endDate2 = dayjs(mktOnlineDates[3].time).format('YYYY-MM-DD');
+  const startDate2 = dayjs(mktOnlineDates[1 + performanceDuration].time).format('YYYY-MM-DD');
+  const endDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
   const rows2 = await getByDate(startDate2, endDate2, page, pageSize);
 
-  const startDate3 = dayjs(mktOnlineDates[1 + 5].time).format('YYYY-MM-DD');
-  const endDate3 = dayjs(mktOnlineDates[5].time).format('YYYY-MM-DD');
-  const rows3 = await getByDate(startDate3, endDate3, page, pageSize);
+  // const startDate3 = dayjs(mktOnlineDates[1 + 5].time).format('YYYY-MM-DD');
+  // const endDate3 = dayjs(mktOnlineDates[5].time).format('YYYY-MM-DD');
+  // const rows3 = await getByDate(startDate3, endDate3, page, pageSize);
 
-  const startDate4 = dayjs(mktOnlineDates[1 + 15].time).format('YYYY-MM-DD');
-  const endDate4 = dayjs(mktOnlineDates[15].time).format('YYYY-MM-DD');
-  const rows4 = await getByDate(startDate4, endDate4, page, pageSize);
+  // const startDate4 = dayjs(mktOnlineDates[1 + 15].time).format('YYYY-MM-DD');
+  // const endDate4 = dayjs(mktOnlineDates[15].time).format('YYYY-MM-DD');
+  // const rows4 = await getByDate(startDate4, endDate4, page, pageSize);
 
-  const finalResult = rows1.rows.map((r1) => {
-    const result = {
-      ...r1.dataValues,
-      threedays: getPreData(r1, rows2),
-      fivedays: getPreData(r1, rows3),
-      fiftydays: getPreData(r1, rows4),
-    };
-    return result;
-  });
+  const finalResult = rows1.rows
+    .filter((r1) => {
+      const tmp = rows2.rows.find((r) => r.security_ccass_code === r1.security_ccass_code);
+      const result = tmp
+        ? ((r1.holding_amt - tmp.holding_amt) / tmp.holding_amt).toFixed(2) : 1;
+      if (result >= 0) {
+        return result >= increase;
+      }
+      return result <= decrease;
+    })
+    .map((r1) => {
+      const result = {
+        ...r1.dataValues,
+        daysago: performanceDuration,
+        targetDays: getPreData(r1, rows2),
+      };
+      return result;
+    });
 
   ctx.body = {
     succcess: true,
-    msg: 'get data success',
+    msg: `get data: in ${performanceDuration} days, increase >= ${increase * 100}% or decrease <= ${decrease * 100}%`,
     data: {
       finalResult,
+      count: finalResult.length,
     },
   };
 });
