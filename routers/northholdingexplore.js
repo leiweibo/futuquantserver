@@ -7,6 +7,9 @@ const { Op } = require('sequelize');
 const { northHolding } = require('../database/models/NorthHolding');
 // const { northSecurity } = require('../database/models/NorthSecurity');
 
+const limitlessLength = 5000;
+const pageByes = 3;
+
 const getMktOnlineDate = async () => {
   const startDate = dayjs().subtract(5, 'week').format('YYYYMMDD');
   const endDate = dayjs().format('YYYYMMDD');
@@ -23,20 +26,23 @@ const getMktOnlineDate = async () => {
   return dates;
 };
 
-const getByDate = async (startDate, endDate, page, pageSize) => {
+const getByDate = async (startDate, endDate, pageSize, startCCassCode, limitless) => {
   const rows = await northHolding.findAndCountAll(
     {
       where: {
+        security_ccass_code: {
+          [Op.gt]: startCCassCode || '30000',
+        },
         trade_date: {
           [Op.and]: {
             // type = 1 表示这只股票的code找不到，大部分情况是已经被清仓了，所以去所有持仓数据，从2020-12-01开始
-            [Op.gt]: startDate,
-            [Op.lte]: endDate,
+            [Op.gte]: startDate,
+            [Op.lt]: endDate,
           },
         },
       },
-      offset: (page - 1) * pageSize,
-      limit: parseInt(pageSize, 10),
+      offset: 0,
+      limit: limitless ? limitlessLength : parseInt(pageSize * pageByes, 10),
       order: [
         ['security_ccass_code', 'ASC'],
       ],
@@ -58,35 +64,13 @@ const getPreData = (r1, row) => {
   };
 };
 
-router.get('/getStkPerformance', async (ctx) => {
-  const params = ctx.request.query;
-  // const performanceCode = params.code;
-  const mktOnlineDates = await getMktOnlineDate();
-  const page = params.p;
-  const pageSize = params.ps;
-  const increase = Number(params.inc);
-  const decrease = -Number(params.dec);
-  const performanceDuration = Number(params.duration ? params.duration : 3);
-
-  const startDate1 = dayjs(mktOnlineDates[1].time).format('YYYY-MM-DD');
-  const endDate1 = dayjs(mktOnlineDates[0].time).format('YYYY-MM-DD');
-  const rows1 = await getByDate(startDate1, endDate1, page, pageSize);
-
-  const startDate2 = dayjs(mktOnlineDates[1 + performanceDuration].time).format('YYYY-MM-DD');
-  const endDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
-  const rows2 = await getByDate(startDate2, endDate2, page, pageSize);
-
-  // const startDate3 = dayjs(mktOnlineDates[1 + 5].time).format('YYYY-MM-DD');
-  // const endDate3 = dayjs(mktOnlineDates[5].time).format('YYYY-MM-DD');
-  // const rows3 = await getByDate(startDate3, endDate3, page, pageSize);
-
-  // const startDate4 = dayjs(mktOnlineDates[1 + 15].time).format('YYYY-MM-DD');
-  // const endDate4 = dayjs(mktOnlineDates[15].time).format('YYYY-MM-DD');
-  // const rows4 = await getByDate(startDate4, endDate4, page, pageSize);
-
-  const finalResult = rows1.rows
+const getResult = (rows1, rows2, increase, decrease, performanceDuration) => {
+  const tmpResult = rows1.rows
     .filter((r1) => {
       const tmp = rows2.rows.find((r) => r.security_ccass_code === r1.security_ccass_code);
+      if (!tmp) {
+        return false;
+      }
       const result = tmp
         ? ((r1.holding_amt - tmp.holding_amt) / tmp.holding_amt).toFixed(2) : 1;
       if (result >= 0) {
@@ -102,13 +86,51 @@ router.get('/getStkPerformance', async (ctx) => {
       };
       return result;
     });
+  return tmpResult;
+};
+
+const fetchData = async (finalResult, rows2, mktOnlineDates,
+  pageSize, startCCassCode, performanceDuration, increase, decrease) => {
+  const startDate1 = dayjs(mktOnlineDates[1].time).format('YYYY-MM-DD');
+  const endDate1 = dayjs(mktOnlineDates[0].time).format('YYYY-MM-DD');
+  const rows1 = await getByDate(startDate1, endDate1, pageSize, startCCassCode, false);
+
+  const result = getResult(rows1, rows2, increase, decrease, performanceDuration);
+  finalResult.push(...result.slice(0, pageSize - finalResult.length));
+  if (finalResult.length < pageSize && rows1.rows.length > 0
+    && rows1.rows.length <= Number(pageSize * pageByes)) {
+    await fetchData(finalResult, rows2, mktOnlineDates,
+      pageSize,
+      rows1.rows.slice(-1)[0].security_ccass_code,
+      performanceDuration, increase, decrease);
+  }
+  return finalResult;
+};
+
+let mktOnlineDates = null;
+router.get('/getStkPerformance', async (ctx) => {
+  const params = ctx.request.query;
+  // const performanceCode = params.code;
+  mktOnlineDates = mktOnlineDates || await getMktOnlineDate();
+  const pageSize = params.ps;
+  const increase = Number(params.inc);
+  const decrease = -Number(params.dec);
+  const performanceDuration = Number(params.duration ? params.duration : 3);
+  const startCCassCode = params.ccasscode;
+  const finalResult = [];
+
+  const startDate2 = dayjs(mktOnlineDates[1 + performanceDuration].time).format('YYYY-MM-DD');
+  const endDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
+  const rows2 = await getByDate(startDate2, endDate2, pageSize, startCCassCode, true);
+
+  await fetchData(finalResult, rows2, mktOnlineDates,
+    pageSize, startCCassCode, performanceDuration, increase, decrease);
 
   ctx.body = {
     succcess: true,
     msg: `get data: in ${performanceDuration} days, increase >= ${increase * 100}% or decrease <= ${decrease * 100}%`,
     data: {
       finalResult,
-      count: finalResult.length,
     },
   };
 });
