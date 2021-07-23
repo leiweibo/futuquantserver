@@ -5,7 +5,7 @@ const dayjs = require('dayjs');
 const { Op } = require('sequelize');
 
 const { northHolding } = require('../database/models/NorthHolding');
-// const { northSecurity } = require('../database/models/NorthSecurity');
+const { northSecurity } = require('../database/models/NorthSecurity');
 
 const limitlessLength = 5000;
 const pageByes = 3;
@@ -104,7 +104,25 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
       rows1.rows.slice(-1)[0].security_ccass_code,
       performanceDuration, increase, decrease);
   }
-  return finalResult;
+  // 当数据都准备好之后，去security表去拿股票code等信息
+  const targetCCassCodes = finalResult.map((r) => r.security_ccass_code);
+  const securities = await northSecurity.findAll({
+    where: {
+      security_ccass_code: {
+        [Op.in]: targetCCassCodes,
+      },
+    },
+  });
+  const realFinalResult = finalResult.map((r) => {
+    const security = securities.find((s) => s.security_ccass_code === r.security_ccass_code);
+    const rs = {
+      security_code: security ? security.security_code : '--',
+      ...r,
+    };
+    return rs;
+  });
+  finalResult.splice(0, finalResult.length);
+  finalResult.push(...realFinalResult);
 };
 
 let mktOnlineDates = null;
