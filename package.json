@@ -27,6 +27,7 @@
     "puppeteer": "^10.0.0",
     "request": "^2.88.2",
     "sequelize": "^6.6.2",
+    "thrift": "^0.14.2",
     "winston": "^3.3.3"
   },
   "devDependencies": {
