@@ -19,8 +19,8 @@
 
 const thrift = require('thrift');
 const assert = require('assert');
-const Calculator = require('./gen-nodejs/Calculator');
-const ttypes = require('./gen-nodejs/tutorial_types');
+const Calculator = require('../helloworld/gen-nodejs/Calculator');
+const ttypes = require('../helloworld/gen-nodejs/tutorial_types');
 
 const transport = thrift.TBufferedTransport;
 const protocol = thrift.TBinaryProtocol;

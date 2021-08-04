@@ -18,7 +18,7 @@ router.get('/kline', async (ctx) => {
       highPrice: Number(dataArray[3]),
       lowPrice: Number(dataArray[4]),
       volume: Number(dataArray[5]),
-      turnover: Number(dataArray[6]),
+      turnover: Number(dataArray[6]), // 成交额
       changeRate: Number(dataArray[8]),
       timestamp: dayjs(dataArray[0]).unix(),
       time: dataArray[0],
