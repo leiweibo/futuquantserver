@@ -115,15 +115,21 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
       },
     },
   });
-  const klineMap = {};
-  await securities.map((r) => {
-    const mktStr = r.security_code.startsWith('6') ? 'SH' : 'SZ';
-    thriftClient.getStockline(`${mktStr}.${r.security_code}`, '2021-07-28', '2021-08-04', (err, resp) => {
-      klineMap[r.security_code] = resp;
-    });
-    return r;
-  });
-  console.log(klineMap);
+  const klineMap = async () => Promise.all(
+    securities.map(async (s) => {
+      const klines = await thriftClient.getStockline(
+        `${s.security_code.startsWith('6') ? 'SH' : 'SZ'}.${s.security_code}`,
+        dayjs(mktOnlineDates[performanceDuration + 1].time).format('YYYY-MM-DD'),
+        endDate1,
+      );
+      const klineObj = {
+        code: s.security_code,
+        kline: klines,
+      };
+      return klineObj;
+    }),
+  );
+  const klines = await klineMap();
 
   const realFinalResult = finalResult.map((r) => {
     const security = securities.find((s) => s.security_ccass_code === r.security_ccass_code);
@@ -135,6 +141,8 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
   });
   finalResult.splice(0, finalResult.length);
   finalResult.push(...realFinalResult);
+
+  return klines;
 };
 
 let mktOnlineDates = null;
@@ -153,7 +161,7 @@ router.get('/getStkPerformance', async (ctx) => {
   const endDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
   const rows2 = await getByDate(startDate2, endDate2, pageSize, startCCassCode, true);
 
-  await fetchData(finalResult, rows2, mktOnlineDates,
+  const klines = await fetchData(finalResult, rows2, mktOnlineDates,
     pageSize, startCCassCode, performanceDuration, increase, decrease);
 
   ctx.body = {
@@ -161,6 +169,7 @@ router.get('/getStkPerformance', async (ctx) => {
     msg: `get data: in ${performanceDuration} days, increase >= ${increase * 100}% or decrease <= ${decrease * 100}%`,
     data: {
       finalResult,
+      klines,
     },
   };
 });
