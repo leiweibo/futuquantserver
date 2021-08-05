@@ -23,19 +23,16 @@ class StklineHandler:
     return round(float(str), 4)
   
   def getStockline(self, stkCode, startDate, endDate):
+    print(f'start to get data of {stkCode}, start date: {startDate}, end date: {endDate}')
     rs = bs.query_history_k_data_plus(stkCode,
       "date,code,preclose,open,close,high,low,volume,turn,pctChg,amount,adjustflag,tradestatus,isST",
       start_date=startDate, end_date=endDate,
       frequency="d", adjustflag="3")
     
-    print('query_history_k_data_plus respond error_code:'+rs.error_code)
-    print('query_history_k_data_plus respond  error_msg:'+rs.error_msg)
-
     data_list = []
     while (rs.error_code == '0') & rs.next():
       result = rs.get_row_data()
       timestamp = time.mktime(datetime.datetime.strptime(result[0],'%Y-%m-%d').timetuple())
-      print(int(timestamp))
       # 获取一条记录，将记录合并在一起
       sktline = Stockline(self.convert(result[3]), self.convert(result[4]), 
         self.convert(result[5]), self.convert(result[6]), int(result[7]), self.convert(result[10]), 

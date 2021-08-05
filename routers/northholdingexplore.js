@@ -6,6 +6,7 @@ const { Op } = require('sequelize');
 
 const { northHolding } = require('../database/models/NorthHolding');
 const { northSecurity } = require('../database/models/NorthSecurity');
+const { thriftClient } = require('../providers/baostock/NodeClient');
 
 const limitlessLength = 5000;
 const pageByes = 3;
@@ -95,6 +96,7 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
   const endDate1 = dayjs(mktOnlineDates[0].time).format('YYYY-MM-DD');
   const rows1 = await getByDate(startDate1, endDate1, pageSize, startCCassCode, false);
 
+  // fetch the data with specified page size recursively.
   const result = getResult(rows1, rows2, increase, decrease, performanceDuration);
   finalResult.push(...result.slice(0, pageSize - finalResult.length));
   if (finalResult.length < pageSize && rows1.rows.length > 0
@@ -113,6 +115,16 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
       },
     },
   });
+  const klineMap = {};
+  await securities.map((r) => {
+    const mktStr = r.security_code.startsWith('6') ? 'SH' : 'SZ';
+    thriftClient.getStockline(`${mktStr}.${r.security_code}`, '2021-07-28', '2021-08-04', (err, resp) => {
+      klineMap[r.security_code] = resp;
+    });
+    return r;
+  });
+  console.log(klineMap);
+
   const realFinalResult = finalResult.map((r) => {
     const security = securities.find((s) => s.security_ccass_code === r.security_ccass_code);
     const rs = {
