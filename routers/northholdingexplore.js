@@ -46,6 +46,7 @@ const getByDate = async (startDate, endDate, pageSize, startCCassCode, limitless
       limit: limitless ? limitlessLength : parseInt(pageSize * pageByes, 10),
       order: [
         ['security_ccass_code', 'ASC'],
+        ['trade_date', 'ASC'],
       ],
     },
   );
@@ -119,7 +120,7 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
     securities.map(async (s) => {
       const klines = await thriftClient.getStockline(
         `${s.security_code.startsWith('6') ? 'SH' : 'SZ'}.${s.security_code}`,
-        dayjs(mktOnlineDates[performanceDuration + 1].time).format('YYYY-MM-DD'),
+        dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD'),
         endDate1,
       );
       const klineObj = {
@@ -157,8 +158,8 @@ router.get('/getStkPerformance', async (ctx) => {
   const startCCassCode = params.ccasscode;
   const finalResult = [];
 
-  const startDate2 = dayjs(mktOnlineDates[1 + performanceDuration].time).format('YYYY-MM-DD');
-  const endDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
+  const startDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
+  const endDate2 = dayjs(mktOnlineDates[performanceDuration - 1].time).format('YYYY-MM-DD');
   const rows2 = await getByDate(startDate2, endDate2, pageSize, startCCassCode, true);
 
   const klines = await fetchData(finalResult, rows2, mktOnlineDates,
