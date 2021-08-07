@@ -91,6 +91,19 @@ const getResult = (rows1, rows2, increase, decrease, performanceDuration) => {
   return tmpResult;
 };
 
+/**
+ * calculate the increase/decrease ratio of the north finance holding.
+ * and return the kline.
+ * @param {*} finalResult the array object that hold the final result.
+ * @param {*} rows2 previous data.
+ * @param {*} mktOnlineDates market trade dates.
+ * @param {*} pageSize page size.
+ * @param {*} startCCassCode pagination ccass code.
+ * @param {*} performanceDuration previous days of the rows.
+ * @param {*} increase increase ratio
+ * @param {*} decrease descrease ratio.
+ * @returns klines.
+ */
 const fetchData = async (finalResult, rows2, mktOnlineDates,
   pageSize, startCCassCode, performanceDuration, increase, decrease) => {
   const startDate1 = dayjs(mktOnlineDates[1].time).format('YYYY-MM-DD');
@@ -149,7 +162,7 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
 let mktOnlineDates = null;
 router.get('/getStkPerformance', async (ctx) => {
   const params = ctx.request.query;
-  // const performanceCode = params.code;
+  // get the market k line, that get the trade date.
   mktOnlineDates = mktOnlineDates || await getMktOnlineDate();
   const pageSize = params.ps;
   const increase = Number(params.inc);
@@ -157,9 +170,24 @@ router.get('/getStkPerformance', async (ctx) => {
   const performanceDuration = Number(params.duration ? params.duration : 3);
   const startCCassCode = params.ccasscode;
   const finalResult = [];
+  let startDate = '2021-07-25';
+  let startIndex = 0;
 
+  const dateArray = mktOnlineDates.map((d) => d.time);
+  if (!mktOnlineDates.map((d) => d.time).includes(startDate)) {
+    for (let i = 0; i < dateArray.length; i++) {
+      if (dayjs(startDate).diff(dayjs(dateArray[i])) >= 0) {
+        startDate = dateArray[i];
+        startIndex = i;
+        break;
+      }
+    }
+  }
+  console.log(`3------------->  target start date is index is ${startIndex}, ${startDate}.`);
+  // get the start date of target previous date.
   const startDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
   const endDate2 = dayjs(mktOnlineDates[performanceDuration - 1].time).format('YYYY-MM-DD');
+  // get the previous date value.
   const rows2 = await getByDate(startDate2, endDate2, pageSize, startCCassCode, true);
 
   const klines = await fetchData(finalResult, rows2, mktOnlineDates,
