@@ -97,6 +97,7 @@ const getResult = (rows1, rows2, increase, decrease, performanceDuration) => {
  * @param {*} finalResult the array object that hold the final result.
  * @param {*} rows2 previous data.
  * @param {*} mktOnlineDates market trade dates.
+ * @param {*} startIndex start index
  * @param {*} pageSize page size.
  * @param {*} startCCassCode pagination ccass code.
  * @param {*} performanceDuration previous days of the rows.
@@ -104,10 +105,10 @@ const getResult = (rows1, rows2, increase, decrease, performanceDuration) => {
  * @param {*} decrease descrease ratio.
  * @returns klines.
  */
-const fetchData = async (finalResult, rows2, mktOnlineDates,
+const fetchData = async (finalResult, rows2, mktOnlineDates, startIndex,
   pageSize, startCCassCode, performanceDuration, increase, decrease) => {
-  const startDate1 = dayjs(mktOnlineDates[1].time).format('YYYY-MM-DD');
-  const endDate1 = dayjs(mktOnlineDates[0].time).format('YYYY-MM-DD');
+  const startDate1 = dayjs(mktOnlineDates[startIndex].time).format('YYYY-MM-DD');
+  const endDate1 = (startIndex - 1 < 0 ? dayjs() : dayjs(mktOnlineDates[startIndex - 1].time)).format('YYYY-MM-DD');
   const rows1 = await getByDate(startDate1, endDate1, pageSize, startCCassCode, false);
 
   // fetch the data with specified page size recursively.
@@ -115,7 +116,7 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
   finalResult.push(...result.slice(0, pageSize - finalResult.length));
   if (finalResult.length < pageSize && rows1.rows.length > 0
     && rows1.rows.length <= Number(pageSize * pageByes)) {
-    await fetchData(finalResult, rows2, mktOnlineDates,
+    await fetchData(finalResult, rows2, mktOnlineDates, startIndex,
       pageSize,
       rows1.rows.slice(-1)[0].security_ccass_code,
       performanceDuration, increase, decrease);
@@ -133,7 +134,7 @@ const fetchData = async (finalResult, rows2, mktOnlineDates,
     securities.map(async (s) => {
       const klines = await thriftClient.getStockline(
         `${s.security_code.startsWith('6') ? 'SH' : 'SZ'}.${s.security_code}`,
-        dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD'),
+        dayjs(mktOnlineDates[performanceDuration + startIndex].time).format('YYYY-MM-DD'),
         endDate1,
       );
       const klineObj = {
@@ -170,7 +171,7 @@ router.get('/getStkPerformance', async (ctx) => {
   const performanceDuration = Number(params.duration ? params.duration : 3);
   const startCCassCode = params.ccasscode;
   const finalResult = [];
-  let startDate = '2021-07-25';
+  let startDate = params.startdate || dayjs().format('YYYY-MM-DD');
   let startIndex = 0;
 
   const dateArray = mktOnlineDates.map((d) => d.time);
@@ -182,15 +183,17 @@ router.get('/getStkPerformance', async (ctx) => {
         break;
       }
     }
+  } else {
+    startIndex = dateArray.indexOf(startDate);
   }
   console.log(`3------------->  target start date is index is ${startIndex}, ${startDate}.`);
   // get the start date of target previous date.
-  const startDate2 = dayjs(mktOnlineDates[performanceDuration].time).format('YYYY-MM-DD');
-  const endDate2 = dayjs(mktOnlineDates[performanceDuration - 1].time).format('YYYY-MM-DD');
+  const startDate2 = dayjs(mktOnlineDates[performanceDuration + startIndex].time).format('YYYY-MM-DD');
+  const endDate2 = dayjs(mktOnlineDates[performanceDuration + startIndex - 1].time).format('YYYY-MM-DD');
   // get the previous date value.
   const rows2 = await getByDate(startDate2, endDate2, pageSize, startCCassCode, true);
 
-  const klines = await fetchData(finalResult, rows2, mktOnlineDates,
+  const klines = await fetchData(finalResult, rows2, mktOnlineDates, startIndex,
     pageSize, startCCassCode, performanceDuration, increase, decrease);
 
   ctx.body = {

@@ -18,4 +18,9 @@ connection.on('error', (err) => {
 // Create a Calculator client with the connection
 const thriftClient = thrift.createClient(StkService, connection);
 
+thriftClient.getStockline('SZ.000401', '2021-07-28', '2021-08-04', (err, response) => {
+  console.log(err);
+  console.log(response);
+});
+
 module.exports = { thriftClient };
