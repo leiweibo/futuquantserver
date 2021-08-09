@@ -106,7 +106,7 @@ const start = async (targetMkt) => {
       if (pendingList.length > 0) {
         const targetDate = pendingList.shift();
         await scrape(targetDate, realBrowser, market);
-      } else {
+      } else if (workingList.length === 0) {
         await realBrowser.close();
       }
     };
