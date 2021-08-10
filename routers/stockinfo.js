@@ -28,46 +28,52 @@ router.get('/important', async (ctx) => {
   const datesUrls = `http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbDateAjaxNew?companyType=${companyType}&reportDateType=0&code=${securityCode}`;
   const dateResp = await axios.get(datesUrls);
   const { data } = dateResp;
-  const dateList = data.data.filter((d, index) => {
-    const filterRes = index === 0 || d.REPORT_DATE.indexOf('-12-31') >= 0;
-    return filterRes;
-  }).map((d1) => dayjs(d1.REPORT_DATE).format('YYYY-MM-DD'));
-
-  // 获取资产负债率 = 总负债/总资产
-  const assetsDebtUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList.join()}&code=${securityCode}`;
-  // 这个接口一次请求最多返回5条，但对于我们的情况，5条也够了。
-  const assetsDebtResp = await axios.get(assetsDebtUrl);
-  const assetDebtRatios = assetsDebtResp.data.data.map((assetDebtData) => {
-    // 商誉
-    const goodWill = assetDebtData.GOODWILL;
-    // 净资产，即归属于母公司股东权益总计
-    const netAssset = assetDebtData.TOTAL_PARENT_EQUITY;
-    // 应付债券
-    const boundPayable = assetDebtData.BOND_PAYABLE;
-    // 长期借款
-    const shortLoan = assetDebtData.SHORT_LOAN;
-    // 短期借款
-    const longLoan = assetDebtData.LONG_LOAN;
-    // 货币现金
-    const cash = assetDebtData.MONETARYFUNDS;
-    const result = {
-      // 总资产
-      totalAsset: assetDebtData.TOTAL_ASSETS,
-      // 总负债,
-      totalLiabilities: assetDebtData.TOTAL_LIABILITIES,
-      // 资产负债率
-      debtRatio: (Number(assetDebtData.TOTAL_LIABILITIES) / Number(assetDebtData.TOTAL_ASSETS))
-        .toFixed(4),
-      // 商誉/净资产比 = 商誉/归属于母公司股东权益总计
-      goodWillRatio: (Number(goodWill) / Number(netAssset)).toFixed(4),
-      reportDate: dayjs(assetDebtData.REPORT_DATE).format('YYYY-MM-DD'),
-      boundPayable,
-      shortLoan,
-      longLoan,
-      cash,
-    };
-    return result;
-  });
+  const dateList = data.data.map((d1) => dayjs(d1.REPORT_DATE).format('YYYY-MM-DD'));
+  const splitedDateList = [];
+  const datePages = Math.floor(dateList.length / 5);
+  for (let i = 0; i <= datePages; i++) {
+    const targetDateList = dateList.slice(i * 5, (i + 1) * 5);
+    splitedDateList.push(targetDateList);
+  }
+  const assetDebtRatios = [];
+  await Promise.all(splitedDateList.map(async (dates) => {
+    // 获取资产负债率 = 总负债/总资产
+    const assetsDebtUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dates.join()}&code=${securityCode}`;
+    // 这个接口一次请求最多返回5条，但对于我们的情况，5条也够了。
+    const assetsDebtResp = await axios.get(assetsDebtUrl);
+    const splitAssetDebtRatios = assetsDebtResp.data.data.map((assetDebtData) => {
+      // 商誉
+      const goodWill = assetDebtData.GOODWILL;
+      // 净资产，即归属于母公司股东权益总计
+      const netAssset = assetDebtData.TOTAL_PARENT_EQUITY;
+      // 应付债券
+      const boundPayable = assetDebtData.BOND_PAYABLE;
+      // 长期借款
+      const shortLoan = assetDebtData.SHORT_LOAN;
+      // 短期借款
+      const longLoan = assetDebtData.LONG_LOAN;
+      // 货币现金
+      const cash = assetDebtData.MONETARYFUNDS;
+      const result = {
+        // 总资产
+        totalAsset: assetDebtData.TOTAL_ASSETS,
+        // 总负债,
+        totalLiabilities: assetDebtData.TOTAL_LIABILITIES,
+        // 资产负债率
+        debtRatio: (Number(assetDebtData.TOTAL_LIABILITIES) / Number(assetDebtData.TOTAL_ASSETS))
+          .toFixed(4),
+        // 商誉/净资产比 = 商誉/归属于母公司股东权益总计
+        goodWillRatio: (Number(goodWill) / Number(netAssset)).toFixed(4),
+        reportDate: dayjs(assetDebtData.REPORT_DATE).format('YYYY-MM-DD'),
+        boundPayable,
+        shortLoan,
+        longLoan,
+        cash,
+      };
+      return result;
+    });
+    assetDebtRatios.push(...splitAssetDebtRatios);
+  }));
 
   // 主要指标
   const keyIndexUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/ZYZBAjaxNew?type=1&code=${securityCode}`;
