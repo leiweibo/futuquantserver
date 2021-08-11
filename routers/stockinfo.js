@@ -35,8 +35,7 @@ router.get('/important', async (ctx) => {
     const targetDateList = dateList.slice(i * 5, (i + 1) * 5);
     splitedDateList.push(targetDateList);
   }
-  const assetDebtRatios = [];
-  await Promise.all(splitedDateList.map(async (dates) => {
+  const splitedDebtResult = await Promise.all(splitedDateList.map(async (dates) => {
     // 获取资产负债率 = 总负债/总资产
     const assetsDebtUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/zcfzbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dates.join()}&code=${securityCode}`;
     // 这个接口一次请求最多返回5条，但对于我们的情况，5条也够了。
@@ -72,8 +71,10 @@ router.get('/important', async (ctx) => {
       };
       return result;
     });
-    assetDebtRatios.push(...splitAssetDebtRatios);
+    return splitAssetDebtRatios;
   }));
+
+  const assetDebtRatios = splitedDebtResult.flat();
 
   // 主要指标
   const keyIndexUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/ZYZBAjaxNew?type=1&code=${securityCode}`;
@@ -93,10 +94,15 @@ router.get('/important', async (ctx) => {
     return result;
   });
 
-  // 利润表数据
-  const profitUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/lrbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dateList}&code=${securityCode}`;
-  const profitResp = await axios.get(profitUrl);
-  const finalComposedData = profitResp.data.data.map((profitData, index) => {
+  const splitedProfitResult = await Promise.all(splitedDateList.map(async (dates) => {
+    // 利润表数据
+    const profitUrl = `http://f10.eastmoney.com/NewFinanceAnalysis/lrbAjaxNew?companyType=${companyType}&reportDateType=0&reportType=1&dates=${dates}&code=${securityCode}`;
+    const profitResp = await axios.get(profitUrl);
+    return profitResp.data.data;
+  }));
+
+  const profitResp = splitedProfitResult.flat();
+  const finalComposedData = profitResp.map((profitData, index) => {
     const finalResult = {
       ...assetDebtRatios[index],
       netProfit: profitData.PARENT_NETPROFIT,
