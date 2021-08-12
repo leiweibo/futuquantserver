@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const dayjs = require('dayjs');
 const { northTransactionDetail } = require('../database/models/NorthTransactionDetail');
 
 const start = async () => {
@@ -15,12 +16,17 @@ const start = async () => {
   });
   const tmpResult = rows.map((r) => r.dataValues);
   const finalResult = new Map();
+  console.log(tmpResult[0]);
+  console.log(tmpResult[1]);
   tmpResult.forEach((result) => {
-    const targetDate = result.trade_date;
-    if (finalResult.has(targetDate)) {
-      finalResult.set(targetDate, finalResult.get(targetDate) + result.net_income);
-    } else {
-      finalResult.set(targetDate, result.targetDate);
+    const targetDate = dayjs(result.trade_date).format('YYYY-MM-DD');
+    if (result.net_income) {
+      if (finalResult.has(targetDate)) {
+        const newVal = Number(finalResult.get(targetDate) + Number(result.net_income)).toFixed(2);
+        finalResult.set(targetDate, newVal);
+      } else {
+        finalResult.set(targetDate, parseFloat(result.net_income));
+      }
     }
   });
   console.log(finalResult);
