@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 const dayjs = require('dayjs');
 const { northTransactionDetail } = require('../database/models/NorthTransactionDetail');
-const { thriftClient } = require('../providers/baostock/NodeClient');
+const { xueqiuClient } = require('../providers/xueqiu/xueqiuclient');
 
 const start = async () => {
   const rows = await northTransactionDetail.findAll({
@@ -31,9 +31,19 @@ const start = async () => {
   const dateArray = Array.from(finalResult.keys());
   const endDate = dateArray.slice(-1)[0];
   const startDate = dateArray[0];
-  // http://baostock.com/baostock/index.php/%E6%8C%87%E6%95%B0%E6%95%B0%E6%8D%AE
-  const klines = await thriftClient.getStockline('SH.510800', startDate, endDate);
-  console.log(klines);
+  const etf50Klines = await xueqiuClient('SH510050', startDate, endDate);
+  const klineMap = new Map();
+  etf50Klines.data.item.forEach((kline) => {
+    const date = dayjs(kline[0]).format('YYYY-MM-DD');
+    klineMap.set(date, {
+      open: kline[2],
+      close: kline[5],
+      low: kline[4],
+      high: kline[3],
+    });
+    return 0;
+  });
+  console.log(klineMap);
 };
 
 (async () => {

@@ -8,7 +8,7 @@ const { puppeteerConfig } = require('../../helpers/puppeteerhelper');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-const start = async () => {
+const xueqiuClient = async (stkCode, startDate, endDate) => {
   const browser = await puppeteer.launch(puppeteerConfig);
 
   const page = await browser.newPage();
@@ -16,6 +16,7 @@ const start = async () => {
   await page.goto('https://xueqiu.com', { waitUntil: 'load', timeout: 0 });
   // const d = dayjs().format('YYYYMMDD');
   // const d = '20210802';
+  const count = dayjs(startDate).diff(endDate, 'day');
 
   await page.setRequestInterception(true);
   page.on('request', async (request) => {
@@ -26,16 +27,13 @@ const start = async () => {
     }
   });
 
-  page.on('response', async (response) => {
-    console.log(`------> ${response.url()}`);
-    response.text().then(async () => {
-      console.log('body');
-    });
-  });
-
-  await page.goto('https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol=SH510050&begin=1629038706391&period=day&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance', { waitUntil: 'load', timeout: 0 });
+  const url = `https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol=${stkCode}&begin=${dayjs(endDate).valueOf()}&period=day&type=before&count=${count}&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance`
+  const resp = await page.goto(url, { waitUntil: 'load', timeout: 0 });
+  const jsonRes = await resp.json();
+  await browser.close();
+  return jsonRes;
 };
 
-start();
+xueqiuClient('SH510050', '2021-07-01', '2021-08-01');
 
-module.exports = { start };
+module.exports = { xueqiuClient };
