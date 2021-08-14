@@ -4,7 +4,7 @@ struct Stockline {
   2: double closePrice,
   3: double highPrice,
   4: double lowPrice,
-  5: i32 volumn,
+  5: double volumn,
   6: double turnover,
   7: double changeRate,
   8: i32 timestamp,

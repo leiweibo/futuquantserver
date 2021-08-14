@@ -35,7 +35,7 @@ class StklineHandler:
       timestamp = time.mktime(datetime.datetime.strptime(result[0],'%Y-%m-%d').timetuple())
       # 获取一条记录，将记录合并在一起
       sktline = Stockline(self.convert(result[3]), self.convert(result[4]), 
-        self.convert(result[5]), self.convert(result[6]), int(result[7]), self.convert(result[10]), 
+        self.convert(result[5]), self.convert(result[6]), self.convert(result[7]), self.convert(result[10]), 
         self.convert(result[9]), int(timestamp), result[0])
       data_list.append(sktline)
     return data_list
