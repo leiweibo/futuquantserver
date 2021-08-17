@@ -11,6 +11,7 @@ const hqService = require('./hq');
 const bonusService = require('./stockbonus');
 const exploreService = require('./northholdingexplore');
 const industryRankService = require('./getindustryrank');
+const northBondStrategyService = require('./strategy');
 
 router.prefix(apiPrefix);
 
@@ -23,4 +24,5 @@ router.use('/hq', hqService.routes());
 router.use('/bonus', bonusService.routes());
 router.use('/explore', exploreService.routes());
 router.use('/industryrank', industryRankService.routes());
+router.use('/strategy', northBondStrategyService.routes());
 module.exports = router;

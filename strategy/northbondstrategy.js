@@ -3,7 +3,7 @@ const dayjs = require('dayjs');
 const { northTransactionDetail } = require('../database/models/NorthTransactionDetail');
 const { xueqiuClient } = require('../providers/xueqiu/xueqiuclient');
 
-const start = async () => {
+const strategy1 = async () => {
   const rows = await northTransactionDetail.findAll({
     attributes: [
       'trade_date',
@@ -46,27 +46,29 @@ const start = async () => {
   });
 
   // 起始资金 10,000,000.00，达到条件开始执行买卖操作
-  let balance = 100000;
+  const startBalance = 100000;
+  let balance = startBalance;
   const operationRatio = 1;
   let holdingAmt = 0;
+  // the operation list showed for test purpose.
   const operationList = [];
+  // the profit list.
+  const profitList = [];
   const targetTradeResult = [...norhtbondResult].filter((r) => (r[1] >= 5000 || r[1] <= -5000));
   targetTradeResult.forEach((t) => {
     const kline = klineMap.get(t[0]);
+    let operateAmt = 0;
+    let doOperate = false; // 是否有做操作
     if (t[1] > 0) {
       // 买入操作：当天收盘价买入
-      let buyAmt = (balance * operationRatio) / kline.close;
-      buyAmt -= buyAmt % 100;
-      balance -= buyAmt * kline.close;
-      if (buyAmt > 0) {
-        holdingAmt += buyAmt;
-        operationList.push({
-          date: t[0],
-          prices: kline,
-          operationAmount: buyAmt,
-          holdingAmount: holdingAmt,
-          finalBalance: balance,
-        });
+      operateAmt = (balance * operationRatio) / kline.close;
+      operateAmt -= operateAmt % 100;
+      if (operateAmt > 0) {
+        balance -= operateAmt * kline.close;
+        holdingAmt += operateAmt;
+        doOperate = true;
+      } else {
+        operateAmt = 0;
       }
     } else {
       console.log('');
@@ -74,26 +76,36 @@ const start = async () => {
       if (holdingAmt > 0 && holdingAmt * operationRatio <= 100) {
         balance += holdingAmt * kline.close;
         holdingAmt -= holdingAmt;
-        operationList.push({
-          date: t[0],
-          prices: kline,
-          operationAmount: -holdingAmt,
-          holdingAmount: holdingAmt,
-          finalBalance: balance,
-        });
+        operateAmt = -holdingAmt;
+        doOperate = true;
       } else if (holdingAmt > 0) {
-        const sellAmt = ((holdingAmt * operationRatio) - ((holdingAmt * operationRatio) % 100));
-        balance += (sellAmt * kline.close);
-        holdingAmt -= sellAmt;
-        operationList.push({
-          date: t[0],
-          prices: kline,
-          operationAmount: -sellAmt,
-          holdingAmount: holdingAmt,
-          finalBalance: balance,
-        });
+        operateAmt = ((holdingAmt * operationRatio) - ((holdingAmt * operationRatio) % 100));
+        balance += (operateAmt * kline.close);
+        holdingAmt -= operateAmt;
+        operateAmt = -operateAmt;
+        doOperate = true;
       }
     }
+
+    if (doOperate) {
+      operationList.push({
+        date: t[0],
+        prices: kline.close,
+        operationAmount: operateAmt,
+        holdingAmount: holdingAmt,
+        finalBalance: balance,
+        northBound: t[1],
+      });
+    }
+
+    profitList.push({
+      date: t[0],
+      prices: kline,
+      operationAmount: operateAmt,
+      holdingAmount: holdingAmt,
+      finalBalance: balance,
+      profit: ((balance + holdingAmt * kline.close - startBalance) / startBalance).toFixed(3),
+    });
   });
   // console.log(operationList);
   const latestKline = etf50Klines.data.item.slice(-1)[0];
@@ -102,8 +114,12 @@ const start = async () => {
   console.log(`holding amount is: ${holdingAmt}`);
   console.log(`balance is: ${balance.toFixed(2)}`);
   console.log(`收益率为:${ratio}`);
+  return profitList;
 };
 
 (async () => {
-  start();
+  const result = await strategy1();
+  console.log('---------------');
+  console.log(result);
 })();
+module.exports = { strategy1 };
