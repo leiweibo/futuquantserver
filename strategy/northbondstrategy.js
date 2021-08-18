@@ -100,21 +100,44 @@ const strategy1 = async () => {
 
     profitList.push({
       date: t[0],
-      prices: kline,
+      northBounds: t[1],
       operationAmount: operateAmt,
       holdingAmount: holdingAmt,
       finalBalance: balance,
       profit: ((balance + holdingAmt * kline.close - startBalance) / startBalance).toFixed(3),
     });
   });
-  // console.log(operationList);
-  const latestKline = etf50Klines.data.item.slice(-1)[0];
-  const ratio = (holdingAmt * latestKline[5] + balance - 100000) / 100000;
-  console.log(operationList);
-  console.log(`holding amount is: ${holdingAmt}`);
-  console.log(`balance is: ${balance.toFixed(2)}`);
-  console.log(`收益率为:${ratio}`);
-  return profitList;
+  const tradeDateArray = Array.from(klineMap.keys());
+  let curProfit = null;
+  const finalProfitList = [];
+  tradeDateArray.forEach((date) => {
+    const profit = profitList.find((p) => p.date === date);
+    if (profit) {
+      curProfit = profit;
+    }
+
+    if (curProfit && klineMap.get(curProfit.date)) {
+      const tmpProfit = { ...curProfit };
+      tmpProfit.date = date;
+      tmpProfit.close = klineMap.get(date).close;
+      tmpProfit.profit = ((tmpProfit.finalBalance
+        + tmpProfit.holdingAmount * klineMap.get(date).close - startBalance)
+        / startBalance).toFixed(3);
+
+      tmpProfit.finalBalance = tmpProfit.finalBalance.toFixed(2);
+      finalProfitList.push(tmpProfit);
+    } else {
+      finalProfitList.push({
+        date,
+        northBounds: 0, // 这个数据没有去获取
+        operationAmount: 0,
+        holdingAmount: 0,
+        finalBalance: startBalance.toFixed(2),
+        profit: '0.000',
+      });
+    }
+  });
+  return finalProfitList;
 };
 
 (async () => {
