@@ -132,6 +132,7 @@ const strategy1 = async () => {
         northBounds: 0, // 这个数据没有去获取
         operationAmount: 0,
         holdingAmount: 0,
+        close: klineMap.get(date).close,
         finalBalance: startBalance.toFixed(2),
         profit: '0.000',
       });
