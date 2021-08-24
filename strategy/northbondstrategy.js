@@ -12,6 +12,7 @@ const { xueqiuClient } = require('../providers/xueqiu/xueqiuclient');
  * @returns 收益率列表，包含当天的收盘价
  */
 const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) => {
+  // sql返回所有北向资金的数据，包含指定日期下，两个市场各自的净流入资金数据
   const rows = await northTransactionDetail.findAll({
     attributes: [
       'trade_date',
@@ -23,8 +24,10 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
     ],
     having: Sequelize.literal('security_mkt LIKE "% Northbound"'),
   });
+  // 将sql返回来的结果，用数组过滤出来。
   const tmpResult = rows.map((r) => r.dataValues);
   const norhtbondResult = new Map();
+  // 合并两个市场的流入资金，存入到norhtbondResult里面
   tmpResult.forEach((result) => {
     const targetDate = dayjs(result.trade_date).format('YYYY-MM-DD');
     if (result.net_income) {
@@ -37,11 +40,16 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
       }
     }
   });
+  // 北向资金数据的日期数据
   const dateArray = Array.from(norhtbondResult.keys());
+  // 获取结束日期
   const endDate = dateArray.slice(-1)[0];
+  // 获取开始日期
   const startDate = dateArray[0];
+  // 获取目标etf行情
   const etf50Klines = await xueqiuClient(securityCode, startDate, endDate);
   const klineMap = new Map();
+  // 将行情数据存到map中
   etf50Klines.data.item.forEach((kline) => {
     const date = dayjs(kline[0]).format('YYYY-MM-DD');
     klineMap.set(date, {
@@ -63,7 +71,7 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
     nDaysMap.set(dateArray[valueArray.length - index - 1], result.toFixed(2));
     return result;
   });
-  const targetTradeResult = [...nDaysMap].filter((r) => (r[1] >= 5000 || r[1] <= -5000));
+  const targetTradeResult = [...nDaysMap].filter((r) => (r[1] >= 5000 || r[1] <= -5000)).reverse();
   // 起始资金 10,000,000.00，达到条件开始执行买卖操作
   let balance = initBalance;
   let holdingAmt = 0;
@@ -105,7 +113,6 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
     if (doOperate) {
       operationList.push({
         date: t[0],
-        prices: kline.close,
         operationAmount: operateAmt,
         holdingAmount: holdingAmt,
         finalBalance: balance,
@@ -115,25 +122,32 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
     profitList.push({
       date: t[0],
       northBounds: t[1],
-      prices: kline.close,
       operationAmount: operateAmt,
       holdingAmount: holdingAmt,
       finalBalance: balance,
-      profit: ((balance + holdingAmt * kline.close - initBalance) / initBalance).toFixed(3),
+      close: kline.close,
     });
   });
-  const tradeDateArray = Array.from(klineMap.keys());
-  let curProfit = null;
+
   const finalProfitList = [];
-  tradeDateArray.forEach((date) => {
+  let curProfit = null;
+  // profitList表示有操作的数据，这样把里面的operationAmount数据拿出来，并且赋值给结果数组，但这个只用一次；
+  // 后面如果日期不在profit列表里面，operationAmount设置为0
+  let firstItemWithValue = false;
+  dateArray.forEach((date) => {
     const profit = profitList.find((p) => p.date === date);
     if (profit) {
+      firstItemWithValue = true;
       curProfit = profit;
+    } else {
+      firstItemWithValue = false;
     }
 
-    if (curProfit && klineMap.get(curProfit.date)) {
+    if (curProfit && klineMap.get(date)) {
       const tmpProfit = { ...curProfit };
       tmpProfit.date = date;
+      tmpProfit.northBounds = norhtbondResult.get(date);
+      tmpProfit.operationAmount = firstItemWithValue ? curProfit.operationAmount : 0;
       tmpProfit.close = klineMap.get(date).close;
       tmpProfit.profit = ((tmpProfit.finalBalance
         + tmpProfit.holdingAmount * klineMap.get(date).close - initBalance)
@@ -147,9 +161,9 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
         northBounds: norhtbondResult.get(date), // 这个数据没有去获取
         operationAmount: 0,
         holdingAmount: 0,
-        close: klineMap.get(date).close,
         finalBalance: initBalance.toFixed(2),
         profit: '0.000',
+        close: klineMap.get(date).close,
       });
     }
   });
