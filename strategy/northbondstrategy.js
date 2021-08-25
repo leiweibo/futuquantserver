@@ -9,9 +9,11 @@ const { xueqiuClient } = require('../providers/xueqiu/xueqiuclient');
  * @param {*} initBalance 起始资金
  * @param {*} buyRatio 购买金额比例
  * @param {*} sellRatio 卖出股票比例
+ * @param {*} netBuy 净流入金额 单位是百万 正数
+ * @param {*} netSell 净流出金额 单位是百万 正数
  * @returns 收益率列表，包含当天的收盘价
  */
-const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) => {
+const strategy1 = async (securityCode, days, initBalance, buyRatio, sellRatio, netBuy, netSell) => {
   // sql返回所有北向资金的数据，包含指定日期下，两个市场各自的净流入资金数据
   const rows = await northTransactionDetail.findAll({
     attributes: [
@@ -64,14 +66,15 @@ const strategy1 = async (securityCode, nDays, initBalance, buyRatio, sellRatio) 
   const valueArray = Array.from(norhtbondResult.values()).reverse();
   valueArray.forEach((val, index) => {
     let nDaysTotalResult = 0;
-    for (let i = 1; i < nDays; i++) {
+    for (let i = 1; i < days; i++) {
       nDaysTotalResult += Number((((index + i) <= valueArray.length - 1) ? valueArray[index + i] : '0.0'));
     }
     const result = Number(val) + Number(nDaysTotalResult);
     nDaysMap.set(dateArray[valueArray.length - index - 1], result.toFixed(2));
     return result;
   });
-  const targetTradeResult = [...nDaysMap].filter((r) => (r[1] >= 5000 || r[1] <= -5000)).reverse();
+  const targetTradeResult = [...nDaysMap].filter((r) => (r[1] >= netBuy || r[1] <= netSell))
+    .reverse();
   // 起始资金 10,000,000.00，达到条件开始执行买卖操作
   let balance = initBalance;
   let holdingAmt = 0;

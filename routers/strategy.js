@@ -9,10 +9,12 @@ router.get('/1', async (ctx) => {
   const initBalance = Number(params.init || 100000);
   const buyRatio = Number(params.buyRatio || 1);
   const sellRatio = Number(params.sellRatio || 1);
+  const netBuy = Number(params.netBuy || 50) * 100;
+  const netSell = -Number(params.netSell || 50) * 100;
   ctx.body = {
     succcess: true,
     msg: 'execute strategy success.',
-    data: await strategy1(securityCode, nDays, initBalance, buyRatio, sellRatio),
+    data: await strategy1(securityCode, nDays, initBalance, buyRatio, sellRatio, netBuy, netSell),
   };
 });
 
