@@ -62,6 +62,8 @@ const normalizeArray = (dataArray) => {
         const rObj = {};
         rObj.trade_date = obj.HdDate;
         rObj.etfratio = obj.Zdf;
+        rObj.today_mkt_val = obj.ShareSZ_Add;
+        rObj.today_mkt_ratio = obj.ShareHoldAdd_ZB_ALL;
         rObj.today_add_mkt_val = obj.ShareSZ;
         rObj.today_add_mkt_ratio = obj.ShareHoldAdd_ZB_ALL;
         rObj.max_add_plate_by_mkt_val = obj.BKSName;
