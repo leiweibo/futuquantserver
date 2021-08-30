@@ -43,7 +43,7 @@ const blukInsertSecurity = async (dataArray) => {
   }
 };
 
-const start = async () => {
+const startNorthTransactionDetail = async () => {
   const { count, rows } = await northTransactionDetail.findAndCountAll(
     {
       order: [
@@ -158,6 +158,8 @@ const start = async () => {
   });
 };
 
-(async () => {
-  await start();
-})();
+// (async () => {
+//   await startNorthTransactionDetail();
+// })();
+
+module.exports = { startNorthTransactionDetail };

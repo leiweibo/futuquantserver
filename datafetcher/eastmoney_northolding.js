@@ -39,7 +39,7 @@ const fetchLatestRecord = async () => {
   return latestRecord;
 };
 
-const start = async () => {
+const startEastmoneyNortholding = async () => {
   const lastRecord = await fetchLatestRecord();
   let pageSize = 0;
   if (lastRecord && lastRecord.trade_date) {
@@ -69,6 +69,8 @@ const start = async () => {
   }
 };
 
-(async () => {
-  await start();
-})();
+// (async () => {
+//   await startEastmoneyNortholding();
+// })();
+
+module.exports = { startEastmoneyNortholding };

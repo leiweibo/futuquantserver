@@ -39,7 +39,7 @@ const blukInsertSecurity = async (dataArray) => {
   }
 };
 
-const start = async (targetMkt) => {
+const startNorthHolding = async (targetMkt) => {
   const latestRecord = await northHolding.findOne(
     {
       where: {
@@ -119,7 +119,9 @@ const start = async (targetMkt) => {
   });
 };
 
-(async () => {
-  await start('sh');
-  await start('sz');
-})();
+// (async () => {
+//   await startNorthHolding('sh');
+//   await startNorthHolding('sz');
+// })();
+
+module.exports = { startNorthHolding };
